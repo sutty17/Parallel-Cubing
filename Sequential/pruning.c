@@ -256,10 +256,13 @@ else
 }
 //------------------------end of initialisation--------------------------------
 
-MOVE:
+while(1){
+do{
+do{
+do{
+//MOVE:
 snP->move = nextMove[snP->movesAllowed][++(snP->move)];
-if (snP->move ==-1)//no more possible move, go to left node
-{
+while(snP->move ==-1){
 	if (r_depth==manLength)
 	{
 		printf("depth %2u completed, %14"PRIu64" nodes",manLength,nodes);
@@ -272,17 +275,17 @@ if (snP->move ==-1)//no more possible move, go to left node
 		snP->mSym = sym;
 	}
 	else {r_depth++; snP--;}
-	goto MOVE;	
+
+snP->move = nextMove[snP->movesAllowed][++(snP->move)];
 }
 
 m=snP->move;
 sym1= snP->mSym;
 //check if a symmetry transformation of the maneuver leads to a maneuver
 //which is lexically earlier. Ignore those moves.
-if (symRed==1 && (sym1 & GESymmetries[m]) != sym1) goto MOVE;
+}while (symRed==1 && (sym1 & GESymmetries[m]) != sym1);
 
-if (manLength-r_depth>=2)//Prevent UUU, RRR, FFF...
-if (m==(snP-1)->move && m==(snP-2)->move) goto MOVE;
+}while ((manLength-r_depth>=2)&&(m==(snP-1)->move && m==(snP-2)->move));
 
 snPNew = snP + 1;
 
@@ -306,9 +309,9 @@ if (r_depth==1)//maneuver complete
 		printf("%s\n (%uq*)\n",sol,manLength);
 		if (subOptLev==-1 ){printf("\n");return;}
 	}
-	goto MOVE;
+	
 }
-
+}while(r_depth==1);
 //fill in information for right node
 
 //distances to target for all three cube orientations
@@ -364,7 +367,7 @@ if (snPNew->distF== r_depth) snPNew->movesAllowed &= snPNew->movesCloserTargetF;
 
 //now go to right move
 nodes++;snP++;
-goto MOVE;
+}
 //-----------------------------------------------------------------------------
 
 }
