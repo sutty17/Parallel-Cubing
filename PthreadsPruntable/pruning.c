@@ -11,6 +11,7 @@
 
 #define NUMTHREADS 32
 
+pthread_mutex_t *waitMutex = malloc(sizeof(pthread_mutex_t)*NUMTHREADS);
 pthread_mutex_t WriteMutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct timeval start;
@@ -33,7 +34,6 @@ const short int movesDefault[12] =
 
 char *mv[] = {"U","U'","R","R'","F","F'","D","D'","L","L'","B","B'"};
 unsigned long count=1;
-
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void initMovesCloserToTarget()
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -70,16 +70,23 @@ int *indices = malloc(sizeof(int) * NUMTHREADS);
 
 gettimeofday(&start,NULL);
 
+        for(i=0; i<NUMTHREADS; i++){
+                indices[i] = i;
+                waitMutex[i] = PTHREAD_MUTEX_INITIALIZER;
+                int id = pthread_create(&threads[i], NULL, generateStuff, (void *) indices+(i*sizeof(int)));
+        }
+
+
 while (count != NGOAL)
 {
-	
-	for(i=0; i<NUMTHREADS; i++){
-		indices[i] = i;
-		int id = pthread_create(&threads[i], NULL, generateStuff, (void *) indices+(i*sizeof(int)));
+	for(i=0;i<NUMTHREADS; i++){
+		pthread_mutex_unlock(&waitMutex[i]);
 	}
-	
-	for(i=0; i<NUMTHREADS; i++){
-		pthread_join((void *)threads[i],NULL);
+
+	sleep(60);
+
+	for(i=0;i<NUMTHREADS;i++){
+		pthread_mutex_lock(&waitMutex[i]);
 	}
 	
 	for (i=0;i<NGOAL/8+1;i++) visitedA[i] |= visitedB[i];
@@ -111,35 +118,38 @@ unsigned long idx,idx1;
 Move m;
 
 	int *index = (int *)threadArgs;
-	for (flipSlice=*index;flipSlice<NFLIPSLICE;flipSlice+=NUMTHREADS)//Index of equivalence class
-	for (twist=0;twist<NTWIST;twist++)
-	for (parity=0;parity<2;parity++)
-	{
-		idx = ((NTWIST*flipSlice + twist)<<1) + parity;
-		if (visitedA[idx>>3] & 1<<(idx&7)) continue;//occupied
-		else
+	while(count != NGOAL){
+		pthread_mutex_lock(&waitMutex[*index]);
+		for (flipSlice=*index;flipSlice<NFLIPSLICE;flipSlice+=NUMTHREADS)//Index of equivalence class
+		for (twist=0;twist<NTWIST;twist++)
+		for (parity=0;parity<2;parity++)
 		{
-			for (m=mU1;m<=mB3;m++)
+			idx = ((NTWIST*flipSlice + twist)<<1) + parity;
+			if (visitedA[idx>>3] & 1<<(idx&7)) continue;//occupied
+			else
 			{
-				parity1 = parity ^ 1;//quarter turn changes parity			
-				symFlipSlice1 = symFlipSliceClassMove[flipSlice][m];
-				sym1 = symFlipSlice1 & 15;
-				flipSlice1 = symFlipSlice1>>4;
-				twist1 = twistMove[twist][m];
-				twist1 = twistConjugate[twist1][sym1];
-				idx1 = ((NTWIST*flipSlice1 + twist1)<<1) + parity1;
-				if (visitedA[idx1>>3] & 1<<(idx1&7))//occupied, so closer to goal
+				for (m=mU1;m<=mB3;m++)
 				{
-					pthread_mutex_lock(&WriteMutex);
-					movesCloserToTarget[twist][(flipSlice<<1)+parity] |= 1<<m;//set bit for this move
-					if (!(visitedB[idx>>3] & 1<<(idx&7)))
-					{visitedB[idx>>3] |= 1<<(idx&7);count++;}
-					pthread_mutex_unlock(&WriteMutex);
-				} 
-			}		
+					parity1 = parity ^ 1;//quarter turn changes parity			
+					symFlipSlice1 = symFlipSliceClassMove[flipSlice][m];
+					sym1 = symFlipSlice1 & 15;
+					flipSlice1 = symFlipSlice1>>4;
+					twist1 = twistMove[twist][m];
+					twist1 = twistConjugate[twist1][sym1];
+					idx1 = ((NTWIST*flipSlice1 + twist1)<<1) + parity1;
+					if (visitedA[idx1>>3] & 1<<(idx1&7))//occupied, so closer to goal
+					{
+						pthread_mutex_lock(&WriteMutex);
+						movesCloserToTarget[twist][(flipSlice<<1)+parity] |= 1<<m;//set bit for this move
+						if (!(visitedB[idx>>3] & 1<<(idx&7)))
+						{visitedB[idx>>3] |= 1<<(idx&7);count++;}
+						pthread_mutex_unlock(&WriteMutex);
+					} 
+				}		
+			}
 		}
+		pthreads_mutex_unlock(&waitMutex[*index]);
 	}
-
 
 }
 
