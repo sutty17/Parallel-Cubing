@@ -155,19 +155,13 @@ char inFileName[50];
 char line[100];
 
 for(threadCounter=0;threadCounter<NUM_THREADS;threadCounter++){
-	printf("Merging file %d...\n",threadCounter);
 	sprintf(inFileName,"OpenMPMainLoopThread%dout.txt",threadCounter);
-	printf("Created name of file: %s\n",inFileName);
 	tempIn = fopen(inFileName,"r");
-	printf("Opened file.\n");
 	while(fgets(line,sizeof line,tempIn) != NULL){
-		printf("Read %d chars.\n",sizeof line);
 		fprintf(allOut,line);
 		fflush(allOut);
 	}
-	printf("Finished with file.\n");
 	fclose (tempIn);
-	printf("Merged file %d\n",threadCounter);
 	fprintf(allOut,"\n\n\n");
 	fflush(allOut);
 }
