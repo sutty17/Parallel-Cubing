@@ -165,7 +165,7 @@ for (k=j;k<NMOVE;k++)
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-void solveOptimal(CubieCube cu)
+void solveOptimal(CubieCube cu,FILE *outFile)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 {
 //------------------------initialisation---------------------------------------
@@ -179,15 +179,15 @@ int manLength;
 unsigned long long sym,sym1,nodes=0,tests=0;
 
 sym= getSymmetries(cu);
-if (sym==1) printf("Cube has no symmetry.\n");
-else printf("Cube has %u symmetries.\n",symCount(sym));
+if (sym==1) fprintf(outFile,"Cube has no symmetry.\n");
+else fprintf(outFile,"Cube has %u symmetries.\n",symCount(sym));
 
-if (subOptLev==0)  printf("Computing all optimal solutions ");
-else if (subOptLev==1) printf("Computing suboptimal solutions (+%d level) ",subOptLev);
-else if (subOptLev>1) printf("Computing suboptimal solutions (+%d levels) ",subOptLev);
-if (symRed==1 && subOptLev!=-1) printf("up to symmetry");
-if (symRed==0 && subOptLev!=-1) printf("without symmetry reduction");
-printf("\n");fflush(stdout);
+if (subOptLev==0)  fprintf(outFile,"Computing all optimal solutions ");
+else if (subOptLev==1) fprintf(outFile,"Computing suboptimal solutions (+%d level) ",subOptLev);
+else if (subOptLev>1) fprintf(outFile,"Computing suboptimal solutions (+%d levels) ",subOptLev);
+if (symRed==1 && subOptLev!=-1) fprintf(outFile,"up to symmetry");
+if (symRed==0 && subOptLev!=-1) fprintf(outFile,"without symmetry reduction");
+fprintf(outFile,"\n");fflush(outFile);
 
 //rotate the cube along URF-diagonal, do get three different orientations
 coU = cubieCubeToCoordCube(cu);
@@ -265,9 +265,9 @@ snP->move = nextMove[snP->movesAllowed][++(snP->move)];
 while(snP->move ==-1){
 	if (r_depth==manLength)
 	{
-		printf("depth %2u completed, %14"PRIu64" nodes",manLength,nodes);
-		printf(", %14"PRIu64" tests\n",tests);
-		fflush(stdout);
+		fprintf(outFile,"depth %2u completed, %14"PRIu64" nodes",manLength,nodes);
+		fprintf(outFile,", %14"PRIu64" tests\n",tests);
+		fflush(outFile);
 		r_depth +=2;
 		manLength = r_depth;
 		if (manLength>optimalDist+2*subOptLev) return;
@@ -306,7 +306,7 @@ if (r_depth==1)//maneuver complete
 		strcpy(sol,solution);
 		for (b=0;b<manLength;b++) strcat(sol,mv[sn[b].move]);
 //printf("%s ",mv[sn[b].move]);
-		printf("%s\n (%uq*)\n",sol,manLength);
+		fprintf(outFile,"%s\n (%uq*)\n",sol,manLength);fflush(outFile);
 		if (subOptLev==-1 ){printf("\n");return;}
 	}
 	

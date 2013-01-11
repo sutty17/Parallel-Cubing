@@ -1,5 +1,7 @@
 //FILE CUBEDEFS.H
 
+#include<stdio.h>
+
 #ifndef CUBEDEFS_H_
 #define CUBEDEFS_H_
 
@@ -120,7 +122,6 @@ typedef struct searchNode
 //*****************************************************************************
 //*                       global arrays and pointers                          *
 //*****************************************************************************
-
 CubieCube symCube[NSYM_Oh];
 CubieCube moveCube[NMOVE];
 int invSymIdx[NSYM_Oh];
@@ -348,7 +349,7 @@ void initMoveBitsConjugate();
 int distanceToTarget(CoordCube co);
 //computes the distance of the cube in QTM to the target subgroup.
 
-void solveOptimal(CubieCube cu);
+void solveOptimal(CubieCube cu, FILE *outFile);
 //The most important routine of the program.
 //Checks all maneuvers with increasing length which transform the cube to the
 //target group. Uses the movesCloserToTarget pruningtable in three different

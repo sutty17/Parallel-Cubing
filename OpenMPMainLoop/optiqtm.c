@@ -19,6 +19,7 @@
 static char manString[256];
 int subOptLev;
 int symRed;
+FILE *outFile;
 
 #ifdef _LINUX_
 static sigjmp_buf jump_buf;
@@ -95,32 +96,34 @@ initNextMove();pp();
 printf("\r\n");
 
 
-        #pragma omp parallel num_threads(NUM_THREADS) private(cc_a)
+        #pragma omp parallel num_threads(NUM_THREADS) private(cc_a,outFile,manString)
 {
 int ext = 0;
 int cont = 0;
 int ID = omp_get_thread_num();
-printf("Hello from thread %d\n",ID);
+char outFileName[50];
+sprintf(outFileName, "OpenMPMainLoopThread%dout.txt", ID);
+outFile = fopen(outFileName, "w");
 while (1)
 {	
 	#pragma omp critical
 	{
 	ext=0;
 	cont=0;
-	printf("In critical section, thread %d\n",ID);
+	fprintf(outFile,"enter cube (x to exit): ");fflush(outFile);
 	printf("enter cube (x to exit): ");fflush(stdout);
 	if (fgets(manString,sizeof(manString),stdin)==NULL) ext=1;
 	if(ext == 0){
-	if (manString[0]=='x') exit(EXIT_SUCCESS);
+	if (manString[0]=='x') ext=1;
 	l=strlen(manString);
 	if (manString[l-1]=='\n') manString[l-1]=0;//remove LF
 	if (l>1 && manString[l-2]=='\r') manString[l-2]=0;//remove CR if present
 	if (strlen(manString)==0) cont = 1;//ignore empty lines
 	if(cont == 0){
-	printf("\nsolving optimal: %s\n",manString);fflush(stdout);
+	fprintf(outFile,"\nsolving optimal: %s\n",manString);fflush(outFile);
 	
 	cc_a = stringToCubieCube(manString);
-	}
+}
 	}
 	}
 	if(ext ==1) break;	
@@ -130,16 +133,47 @@ while (1)
   	if (sigsetjmp(jump_buf, 1) == 0)
 	{
 		signal(SIGINT, user_break);
-		solveOptimal(cc_a);
-		printf("\nTime elapsed for %s: %f\nEND-OF-SOLVE\n",manString,((double) clock() - start) / CLOCKS_PER_SEC);fflush(stdout);
+		solveOptimal(cc_a,outFile);
+		fprintf(outFile,"\nTime elapsed for %s: %f\nEND-OF-SOLVE\n",manString,((double) clock() - start) / CLOCKS_PER_SEC);fflush(outFile);
 	}
 	signal(SIGINT, SIG_IGN);
 	#else
-	solveOptimal(cc_a);
-	printf("\nTime elapsed for %s: %f\nEND-OF-SOLVE\n",manString,((double) clock() - start) / CLOCKS_PER_SEC);fflush(stdout);
+	solveOptimal(cc_a,outFile);
+	fprintf(outFile,"\nTime elapsed for %s: %f\nEND-OF-SOLVE\n",manString,((double) clock() - start) / CLOCKS_PER_SEC);fflush(outFile);
 	#endif
 	}
+	fclose(outFile);
 }
+
+int threadCounter;
+
+FILE *allOut = NULL;
+
+allOut = fopen("OpenMPMainLoopAllOut.txt","w");
+FILE *tempIn = NULL;
+char inFileName[50];
+char line[100];
+
+for(threadCounter=0;threadCounter<NUM_THREADS;threadCounter++){
+	printf("Merging file %d...\n",threadCounter);
+	sprintf(inFileName,"OpenMPMainLoopThread%dout.txt",threadCounter);
+	printf("Created name of file: %s\n",inFileName);
+	tempIn = fopen(inFileName,"r");
+	printf("Opened file.\n");
+	while(fgets(line,sizeof line,tempIn) != NULL){
+		printf("Read %d chars.\n",sizeof line);
+		fprintf(allOut,line);
+		fflush(allOut);
+	}
+	printf("Finished with file.\n");
+	fclose (tempIn);
+	printf("Merged file %d\n",threadCounter);
+	fprintf(allOut,"\n\n\n");
+	fflush(allOut);
+}
+
+fclose(allOut);
+
 exit(EXIT_SUCCESS);
 return 0;
 }
