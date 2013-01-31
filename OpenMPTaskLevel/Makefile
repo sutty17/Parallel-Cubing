@@ -11,7 +11,7 @@ optiqtm.o : optiqtm.c
 	gcc -O3 -Wall -c optiqtm.c
 
 pruning.o : pruning.c
-	gcc -O3 -Wall -c pruning.c
+	gcc -O3 -Wall -c -fopenmp pruning.c
 
 symmetry.o : symmetry.c
 	gcc -O3 -Wall -c symmetry.c
