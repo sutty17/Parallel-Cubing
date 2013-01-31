@@ -9,9 +9,9 @@
 #include<stdint.h>
 #include<sys/time.h>
 
-#define NUMTHREADS 32
+#define NUMTHREADS 16
 
-pthread_mutex_t *waitMutex = malloc(sizeof(pthread_mutex_t)*NUMTHREADS);
+pthread_mutex_t *waitMutex;
 pthread_mutex_t WriteMutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct timeval start;
@@ -59,6 +59,7 @@ free(visitedA); free(visitedB);
 return;
 
 MAKETABLE:
+waitMutex = malloc(sizeof(pthread_mutex_t)*NUMTHREADS);
 printf("\ngenerating pruning table (538 MB), this may take half an hour.\n");
 fflush(stdout);
 visitedA[0] = 1;visitedB[0] = 1;
@@ -72,7 +73,7 @@ gettimeofday(&start,NULL);
 
         for(i=0; i<NUMTHREADS; i++){
                 indices[i] = i;
-                waitMutex[i] = PTHREAD_MUTEX_INITIALIZER;
+                pthread_mutex_init(&waitMutex[i],NULL);
                 int id = pthread_create(&threads[i], NULL, generateStuff, (void *) indices+(i*sizeof(int)));
         }
 
@@ -83,7 +84,7 @@ while (count != NGOAL)
 		pthread_mutex_unlock(&waitMutex[i]);
 	}
 
-	sleep(60);
+	sleep(1);
 
 	for(i=0;i<NUMTHREADS;i++){
 		pthread_mutex_lock(&waitMutex[i]);

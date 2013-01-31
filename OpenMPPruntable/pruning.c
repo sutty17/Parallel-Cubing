@@ -71,7 +71,7 @@ MAKETABLE:
   fflush (stdout);
   visitedA[0] = 1;
   visitedB[0] = 1;
-omp_set_num_threads(32);
+omp_set_num_threads(16);
 gettimeofday(&start,NULL);
   while (count != NGOAL)
     {

@@ -1,5 +1,5 @@
 prog: coordcube.o cubiecube.o optiqtm.o pruning.o symmetry.o
-	gcc -pthread coordcube.o cubiecube.o optiqtm.o pruning.o symmetry.o -o optiqtm
+	gcc coordcube.o cubiecube.o optiqtm.o pruning.o symmetry.o -pthread -o optiqtm
 
 coordcube.o : coordcube.c
 	gcc -O3 -Wall -c coordcube.c

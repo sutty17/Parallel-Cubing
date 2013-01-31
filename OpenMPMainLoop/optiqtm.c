@@ -4,7 +4,7 @@
 //Comment this line out if you compile with MinGW under Windows.
 //This disables the SIGNAL handling.
 
-#define NUM_THREADS 2
+#define NUM_THREADS 32
 
 #include <stdio.h>
 #include <stdlib.h>
