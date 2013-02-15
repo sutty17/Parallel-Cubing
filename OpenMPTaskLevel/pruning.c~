@@ -200,7 +200,6 @@ solveOptimal (CubieCube cu)
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 {
 //------------------------initialisation---------------------------------------
-//{
   int b, mConjU, mConjR, mConjF, twistConjU, twistConjR, twistConjF;
   CoordCube coU, coR, coF;
   int r_depth, optimalDist = 99;
@@ -288,7 +287,7 @@ solveOptimal (CubieCube cu)
 
   snP->movesAllowed = 0xfff;	//all moves are allowed for the first node
   snP->mSym = sym;
-//}
+
   if (snP->distU == 0 && snP->distR == 0 && snP->distF == 0)
     r_depth = manLength = 2;
   else
@@ -310,30 +309,26 @@ solveOptimal (CubieCube cu)
 
     }
 //------------------------end of initialisation--------------------------------
-int ret = 1;
-#pragma omp parallel num_threads(3) private(m,b) shared(snP, nextMove)
-  {
-    int ID = omp_get_thread_num();
 
-    while (ret == 1)
+#pragma omp parallel num_threads(3) private(m)
+  {
+    int ID = omp_get_thread_num ();
+
+    while (1)
       {
-		#pragma omp barrier
-	if(ret)
 	do
 	  {
-	#pragma omp barrier
 #pragma omp single
 	    {
-		  if(ret)
 	      do
 		{
-		  if(ret)
 		  do
 		    {
+//MOVE:
 		      snP->move = nextMove[snP->movesAllowed][++(snP->move)];
-		      while ((snP->move == -1)&&ret)
+		      while (snP->move == -1)
 			{
-			  if ((r_depth == manLength)&&ret)
+			  if (r_depth == manLength)
 			    {
 			      printf ("depth %2u completed, %14" PRIu64
 				      " nodes", manLength, nodes);
@@ -341,65 +336,50 @@ int ret = 1;
 			      fflush (stdout);
 			      r_depth += 2;
 			      manLength = r_depth;
-			      if (manLength > optimalDist + 2 * subOptLev){
-				ret = 0;
-				}
-			    if(ret){
-				  snP->movesAllowed = 0xfff;
+			      if (manLength > optimalDist + 2 * subOptLev)
+				return;
+			      snP->movesAllowed = 0xfff;
 			      snP->mSym = sym;
-				}
-				}
-			  else if(ret)
+			    }
+			  else
 			    {
 			      r_depth++;
 			      snP--;
 			    }
-				if(ret){
+
 			  snP->move =
 			    nextMove[snP->movesAllowed][++(snP->move)];
-				}
 			}
-			if(ret){
+
 		      m = snP->move;
 		      sym1 = snP->mSym;
-			}
 //check if a symmetry transformation of the maneuver leads to a maneuver
 //which is lexically earlier. Ignore those moves.
 		    }
-			
-		  while ((symRed == 1 && (sym1 & GESymmetries[m]) != sym1)&&ret);
+		  while (symRed == 1 && (sym1 & GESymmetries[m]) != sym1);
 
 		}
-	      while (((manLength - r_depth >= 2)
-		     && (m == (snP - 1)->move && m == (snP - 2)->move))&&ret);
-	
-		if(ret){
+	      while ((manLength - r_depth >= 2)
+		     && (m == (snP - 1)->move && m == (snP - 2)->move));
+	    
 	    snPNew = snP + 1;
-		}
-	}
-	
-	if(ret == 0){
-	break;
 	}
 //coordinates relevant if cube is in target subgroup (all zero -> Id-cube)
-		switch (ID)
+	    switch (ID)
 	      {
 	      case 0:
-		m = snP->move;
 		snPNew->edge6Pos = edge6PosMove[snP->edge6Pos][m];
 		break;
 
 	      case 1:
-	      m = snP->move;    
 		snPNew->edge4Pos = edge4PosMove[snP->edge4Pos][m];
 		break;
 
 	      case 2:
-	      m = snP->move;    
 		snPNew->corn6Pos = corn6PosMove[snP->corn6Pos][m];
 		break;
 	      }
-#pragma omp barrier
+
 #pragma omp single
 	    {
 	      if (r_depth == 1)	//maneuver complete
@@ -412,23 +392,28 @@ int ret = 1;
 			optimalDist = manLength;
 		      char *solution = "SOLUTION:";
 		      char sol[100];
+		      //      strcpy(" ",sol);
 		      strcpy (sol, solution);
 		      for (b = 0; b < manLength; b++)
 			strcat (sol, mv[sn[b].move]);
+//printf("%s ",mv[sn[b].move]);
 		      printf ("%s\n (%uq*)\n", sol, manLength);
+		      if (subOptLev == -1)
+			{
+			  printf ("\n");
+			  return;
+			}
 		    }
 
 		}
 	    }
-	#pragma omp barrier
 	  }
 	while (r_depth == 1);
-	  
+      
 //fill in information for right node
 
 //distances to target for all three cube orientations
 
-if(ret==0){break;}
 
     switch (ID)
       {
@@ -455,22 +440,18 @@ if(ret==0){break;}
 	break;
 
       }
-	
+
 //new coset coordinates for right node
 #pragma omp single
     {
-
       snPNew->parity = 1 - snP->parity;
       snPNew->mSym = snP->mSym & ESymmetries[m];
-	
     }
 
-#pragma omp barrier
     switch (ID)
       {
 
       case 0:
-	m=snP->move;
 	mConjU = moveConjugate[m][snP->symU];
 	b = symFlipSliceClassMove[snP->flipSliceU][mConjU];
 	snPNew->flipSliceU = b >> 4;
@@ -484,7 +465,6 @@ if(ret==0){break;}
 	break;
 
       case 1:
-	m=snP->move;
 	m = moveConjugate[m][16];
 	mConjR = moveConjugate[m][snP->symR];
 	b = symFlipSliceClassMove[snP->flipSliceR][mConjR];
@@ -500,8 +480,6 @@ if(ret==0){break;}
 	break;
 
       case 2:
-	m=snP->move;
-	m = moveConjugate[m][16];
 	m = moveConjugate[m][16];
 	mConjF = moveConjugate[m][snP->symF];
 	b = symFlipSliceClassMove[snP->flipSliceF][mConjF];
@@ -516,27 +494,39 @@ if(ret==0){break;}
 							     symF][32]];
 	break;
       }
+
 //12bit vectors hold information which moves carry the cube closer
 
 
 //compute which moves are allowed for this node
-#pragma omp barrier
-
 #pragma omp single
     {
       snPNew->movesAllowed = movesDefault[snP->move];
-      r_depth--;
-	  
-	if (snPNew->distU == r_depth)
+    }
+
+    switch (ID)
+      {
+
+      case 0:
+	if (snPNew->distU == --r_depth)
 	  snPNew->movesAllowed &= snPNew->movesCloserTargetU;
-	  
-	 
+	break;
+
+      case 1:
 	if (snPNew->distR == r_depth)
 	  snPNew->movesAllowed &= snPNew->movesCloserTargetR;
-	  
+	break;
+
+      case 2:
 	if (snPNew->distF == r_depth)
 	  snPNew->movesAllowed &= snPNew->movesCloserTargetF;
-	  
+	break;
+
+      }
+  
+//now go to right move
+#pragma omp single
+{
   nodes++;
   snP++;
 }
