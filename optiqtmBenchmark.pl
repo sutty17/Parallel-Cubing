@@ -49,8 +49,15 @@ print OUTPUT "\nTook $runTime seconds to execute\n";
 
 $out = "";
 
+open(OUT, '>>'."TerminalOutput/".$version.$year.$mon.$mday.$hour.$min.$sec.".txt");
+
+print OUT @got;
+
+close(OUT);
+
 foreach(@got){
 	$out = $out.$_;
+	
 }
 
 open(TIMES, '>>'."Times/".$version.'Times-'.$scrambles.'-'.$year.$mon.$mday.$hour.$min.$sec.".txt");
