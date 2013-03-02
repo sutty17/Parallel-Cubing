@@ -6,7 +6,7 @@
 #include <omp.h>
 #include "cubedefs.h"
 
-#define NUM_THREADS 4
+#define NUM_THREADS 2
 #define DEPTH 2
 
 extern int subOptLev;
@@ -170,19 +170,22 @@ for (k=j;k<NMOVE;k++)
 }
 }
 
-int restrictMoves(SearchNode *sn){
+int restrictMoves(SearchNode *sn,int depth){
 int ret = 0;
 #pragma omp critical
 {
-	printf("Thread %d restricting moves\n",omp_get_thread_num());
+	if(waiting!=0){
+		//printf("Thread %d restricting then waiting\n",omp_get_thread_num());
+		ret= -1;
+	}
 	int i = 0;
 	int b = 0;
 	for(i=0;i<DEPTH;i++){
 		if(limit[i] == 11){
 			if(i+1 == DEPTH){
-				printf("Thread %d finished depth, waiting for other threads\n",omp_get_thread_num());
+				//printf("Thread %d finished depth, waiting for other threads\n",omp_get_thread_num());
 				ret = -1;
-				waiting++;
+				waiting=1;
 			}
 			limit[i] = 0;
 		} else {
@@ -191,33 +194,28 @@ int ret = 0;
 		}
 	}
 	
-	if(ret == 0){
-		for(i=0;i<DEPTH;i++){
-			printf("%d ",limit[i]);
-			fflush(stdout);
-		}
-		printf("\n");
+
+	int j = DEPTH;
+	//printf("Current limits %d depth %d: ",omp_get_thread_num(),depth);
+	fflush(stdout);
+	for(i=0;i<DEPTH;i++){
+		j = j-1;
+		sn[j].movesRestricted = ((1<<limit[i]));
+		sn[j].movesAllowed &= sn[j].movesRestricted;
+		sn[j].move = mU1-1;
+		//printf(" %d",limit[i]);
+		//fflush(stdout);
+	}
+	//printf("\n");
+	
+	printf("%d %d %d %d\n",limit[0],limit[1],depth,omp_get_thread_num());
+	
+	if((limit[0]==10)&(limit[1]==1)){
+		printf("Allocating BU' to %d at depth %d\n",omp_get_thread_num(),depth);
 	}
 	
-	if(ret != -1){
-		int j = DEPTH;
-		for(i=0;i<DEPTH;i++){
-			j = j-1;
-			sn[j].movesRestricted = (0xfff - (1<<limit[i]));
-			sn[j].movesAllowed &= sn[j].movesRestricted;
-			sn[j].move = mU1-1;
-		}
-	}
 }
-if(waiting){
-	waiting++;
-	printf("Thread %d waiting... %d\n",omp_get_thread_num(),waiting);
-	while(waiting+1 < NUM_THREADS){
-		sleep(1);
-	}
-	waiting = 0;
-	return -1;
-}
+
 return ret;
 }
 
@@ -241,7 +239,7 @@ int depthDone[NUM_THREADS];
 printf("About to enter parallel\n");
 
 FILE *outFile;
-#pragma omp parallel num_threads(NUM_THREADS) shared(cu,optimalDist,nodes,tests,movesClaimed,depthDone,waiting) private(outFile,threadMoves)
+#pragma omp parallel num_threads(NUM_THREADS) shared(cu,optimalDist,nodes,tests,movesClaimed,depthDone,waiting,limit) private(outFile,threadMoves)
 {
 
 int ID = omp_get_thread_num();
@@ -350,7 +348,7 @@ snP->movesCloserTargetF= moveBitsConjugate[movesCloserToTarget[twistConjF]
 snP->movesAllowed = 0xfff;//all moves are allowed for the first node
 snP->mSym = sym;
 
-restrictMoves(sn);
+restrictMoves(sn,0);
 
 if (snP->distU==0 && snP->distR==0 && snP->distF==0 ) r_depth = manLength=2;
 else
@@ -391,19 +389,19 @@ do{
 do{
 do{
 snP->move = nextMove[snP->movesAllowed][++(snP->move)];
-fprintf(outFile,"Thread %d move %s\n",ID,mv[snP->move]);
-fflush(outFile);
+//fprintf(outFile,"Thread %d move %s\n",ID,mv[snP->move]);
+//fflush(outFile);
 
 //fprintf(outFile,"%s\n",mv[snP->move]);
 //fflush(outFile);
 while(snP->move ==-1){
 	if (r_depth==manLength)
 	{
-		if(restrictMoves(sn)==-1){
-			depthDone[ID] = manLength;
+		if(restrictMoves(sn,manLength)==-1){
 			fprintf(outFile,"depth %2u completed, %14"PRIu64" nodes",manLength,nodes);
 			fprintf(outFile,", %14"PRIu64" tests\n",tests);
 			fflush(outFile);
+			if(manLength>=optimalDist){ret=1;break;}
 			r_depth +=2;
 			manLength = r_depth;
 			if (manLength>optimalDist+2*subOptLev) {ret = 1;break;}
@@ -411,20 +409,26 @@ while(snP->move ==-1){
 			snP->move = mU1-1;
 			snP->movesAllowed = snP->movesRestricted;
 			snP->mSym = sym;
-						
-			if(optimalDist!=99){ret=1;break;}
-		} else {
-			snP->move = mU1-1;
-			snP->move = nextMove[snP->movesAllowed][++(snP->move)];
-			#pragma omp critical
-			{
-				SearchNode *search = sn;
-				printf("Thread %d: ",ID);
-				for(;search<=snP;search++){
-					printf("%s ",mv[search->move]);
+			
+			int ready = 1;
+			int j;
+			do{
+				depthDone[ID] = manLength;
+				ready = 1;
+				for(j = 0;j<NUM_THREADS;j++){
+					if(depthDone[j]<depthDone[ID]){
+						ready = 0;
+					}
 				}
-				printf("\n");
-			}
+				if(!ready){
+					sleep(10);
+				}
+			}while(ready==0);
+		
+			waiting = 0;
+			
+			if(optimalDist!=99){ret=1;break;}
+			
 		}
 		
 	}
@@ -463,6 +467,12 @@ snPNew->corn6Pos=corn6PosMove[snP->corn6Pos][m];
 if (r_depth==1)//maneuver complete
 {
 	tests++;
+	//fprintf(outFile,"Thread %d testing maneuver ",ID);
+	//for(b=0;b<manLength;b++){
+	//	fprintf(outFile,"%s ",mv[sn[b].move]);
+	//}
+	//fprintf(outFile,"\n");
+	//fflush(outFile);
 	if (snPNew->corn6Pos==0 && snPNew->edge6Pos==0 && snPNew->edge4Pos==0)
 	{
 		if (optimalDist>manLength) {
@@ -480,7 +490,7 @@ if (r_depth==1)//maneuver complete
 		strcpy(sol,solution);
 		//strcat(sol,snPNew->prefix);
 		for (b=0;b<manLength;b++) strcat(sol,mv[sn[b].move]);
-		fprintf(outFile,"%s\n (%uq*)\n",sol,manLength);
+		fprintf(outFile,"%s\n (%uq*)\n%d\n",sol,manLength,optimalDist);
 		fflush(outFile);
 	}
 	
