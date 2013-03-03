@@ -4,8 +4,8 @@
 //Comment this line out if you compile with MinGW under Windows.
 //This disables the SIGNAL handling.
 
-#define NUM_THREADS 4
-#define NUM_GROUPS 1
+
+#define NUM_GROUPS 2
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -100,7 +100,11 @@ initMovesCloserToTarget();pp();
 initNextMove();pp();
 printf("\r\n");
 
-int ID = 0;
+omp_set_nested(1);
+
+#pragma omp parallel num_threads(NUM_GROUPS) private(cc_a,manString)
+{
+int ID = omp_get_thread_num();
 int ext = 0;
 int cont = 0;
 
@@ -111,20 +115,22 @@ groupOut = fopen(groupOutFileName,"w");
 close(groupOut);
 while (1)
 {
-	printf("enter cube (x to exit): ");fflush(stdout);
-	if (fgets(manString,sizeof(manString),stdin)==NULL) ext=1;
-	if(ext==0){
-		if (manString[0]=='x') ext=1;
-		gettimeofday(&start,NULL);
-		l=strlen(manString);
-		if (manString[l-1]=='\n') manString[l-1]=0;//remove LF
-		if (l>1 && manString[l-2]=='\r') manString[l-2]=0;//remove CR if present
-		if (strlen(manString)==0) cont=1;
-		if(cont == 0){
-			printf("\nsolving optimal: %s\n",manString);fflush(stdout);
+	#pragma omp critical
+	{
+		printf("enter cube (x to exit): ");fflush(stdout);
+		if (fgets(manString,sizeof(manString),stdin)==NULL) ext=1;
+		if(ext==0){
+			if (manString[0]=='x') ext=1;
+			gettimeofday(&start,NULL);
+			l=strlen(manString);
+			if (manString[l-1]=='\n') manString[l-1]=0;//remove LF
+			if (l>1 && manString[l-2]=='\r') manString[l-2]=0;//remove CR if present
+			if (strlen(manString)==0) cont=1;
+			if(cont == 0){
+				printf("\nsolving optimal: %s\n",manString);fflush(stdout);
+			}
 		}
 	}
-
 	if(ext){break;}
 	if(cont){continue;}
 	cc_a = stringToCubieCube(manString);
@@ -157,7 +163,7 @@ while (1)
 	char line[100];
 
 	
-	for(threadCounter=0;threadCounter<NUM_THREADS;threadCounter++){
+	for(threadCounter=0;threadCounter<getNumThreads();threadCounter++){
 		sprintf(inFileName,"OpenMPVariableDepthThread%dGroup%dOut.txt",threadCounter,ID);
 		tempIn = fopen(inFileName,"r");
 		while(fgets(line,sizeof line,tempIn) != NULL){
@@ -176,7 +182,7 @@ while (1)
 
 	
 }
-
+}
 
 printf("Writing to all out\n");
 FILE *allOut = NULL;

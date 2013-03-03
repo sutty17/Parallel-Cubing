@@ -175,15 +175,18 @@ int ret = 0;
 #pragma omp critical
 {
 	if(waiting!=0){
-		//printf("Thread %d restricting then waiting\n",omp_get_thread_num());
 		ret= -1;
 	}
 	int i = 0;
 	int b = 0;
+	
+	for(i=0;i<NNODE;i++){
+		sn[i].movesAllowed = 0xfff;
+	}
+	
 	for(i=0;i<DEPTH;i++){
 		if(limit[i] == 11){
 			if(i+1 == DEPTH){
-				//printf("Thread %d finished depth, waiting for other threads\n",omp_get_thread_num());
 				ret = -1;
 				waiting=1;
 			}
@@ -196,23 +199,16 @@ int ret = 0;
 	
 
 	int j = DEPTH;
-	//printf("Current limits %d depth %d: ",omp_get_thread_num(),depth);
-	fflush(stdout);
 	for(i=0;i<DEPTH;i++){
 		j = j-1;
-		sn[j].movesRestricted = ((1<<limit[i]));
+		sn[j].movesRestricted = (1<<limit[i]);
 		sn[j].movesAllowed &= sn[j].movesRestricted;
 		sn[j].move = mU1-1;
 		//printf(" %d",limit[i]);
 		//fflush(stdout);
 	}
 	//printf("\n");
-	
-	printf("%d %d %d %d\n",limit[0],limit[1],depth,omp_get_thread_num());
-	
-	if((limit[0]==10)&(limit[1]==1)){
-		printf("Allocating BU' to %d at depth %d\n",omp_get_thread_num(),depth);
-	}
+
 	
 }
 
@@ -421,7 +417,7 @@ while(snP->move ==-1){
 					}
 				}
 				if(!ready){
-					sleep(10);
+					sleep(1);
 				}
 			}while(ready==0);
 		
@@ -545,7 +541,7 @@ snPNew->movesCloserTargetF= moveBitsConjugate[movesCloserToTarget[twistConjF]
                 [(snPNew->flipSliceF<<1)+snPNew->parity]][symIdxMultiply[snPNew->symF][32]];
 
 //compute which moves are allowed for this node
-snPNew->movesAllowed = movesDefault[snP->move];
+snPNew->movesAllowed = (movesDefault[snP->move]&snPNew->movesRestricted);
 if (snPNew->distU== --r_depth) snPNew->movesAllowed &= snPNew->movesCloserTargetU;
 if (snPNew->distR== r_depth) snPNew->movesAllowed &= snPNew->movesCloserTargetR;
 if (snPNew->distF== r_depth) snPNew->movesAllowed &= snPNew->movesCloserTargetF;
@@ -559,6 +555,10 @@ close(outFile);
 }
 //-----------------------------------------------------------------------------
 
-
 }
+
+int getNumThreads(){
+	return NUM_THREADS;
+}
+
 
