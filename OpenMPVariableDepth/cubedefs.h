@@ -350,7 +350,7 @@ void initMoveBitsConjugate();
 int distanceToTarget(CoordCube co);
 //computes the distance of the cube in QTM to the target subgroup.
 
-int restrictMoves(SearchNode *sn);
+int restrictMoves(SearchNode *sn,int depth);
 
 void solveOptimal(CubieCube cu, int group);
 //The most important routine of the program.
@@ -364,6 +364,8 @@ void initNextMove();
 //Computes the nextMove table. Given an 12-bit movesAllowed vector z
 //and a move m, nextMove[z][m] returns the next move m' in z with m'>m.
 //If no such move exists, -1 is returned.
+
+int getNumThreads();
 
 //*****************************************************************************
 //*                            some other stuff                               *
