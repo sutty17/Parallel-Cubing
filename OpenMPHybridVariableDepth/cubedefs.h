@@ -3,6 +3,9 @@
 #ifndef CUBEDEFS_H_
 #define CUBEDEFS_H_
 
+#define NUM_GROUPS 1
+#define NUM_THREADS 4
+#define DEPTH 4
 
 #define Color		Axis
 
@@ -350,7 +353,7 @@ void initMoveBitsConjugate();
 int distanceToTarget(CoordCube co);
 //computes the distance of the cube in QTM to the target subgroup.
 
-int restrictMoves(SearchNode *sn,int depth);
+int restrictMoves(SearchNode *sn,int depth,int group);
 
 void solveOptimal(CubieCube cu, int group);
 //The most important routine of the program.

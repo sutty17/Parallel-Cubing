@@ -6,7 +6,6 @@
 #include <omp.h>
 #include "cubedefs.h"
 
-#define NUM_THREADS 4
 
 extern int subOptLev;
 extern int symRed;
@@ -334,7 +333,10 @@ outFile = fopen(outFileName, "w");
 fprintf(outFile,"Begin\n\n");
 fflush(outFile);
 
+char string[100];
+cubieCubeToString(cu,string);
 
+fprintf(outFile,"%s\n",string);
 
 //if(snP->movesAllowed == 0){ret=1;fprintf(outFile,"No moves\n");fflush(outFile);}
 #pragma omp barrier

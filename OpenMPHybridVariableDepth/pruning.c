@@ -6,9 +6,6 @@
 #include <omp.h>
 #include "cubedefs.h"
 
-#define NUM_THREADS 2
-#define DEPTH 2
-
 extern int subOptLev;
 extern int symRed;
 
@@ -24,7 +21,7 @@ const short int movesDefault[12] =
 //has the corresponding four bits cleared.
 
 char *mv[] = {"U","U'","R","R'","F","F'","D","D'","L","L'","B","B'"};
-int limit[DEPTH];
+int limit[NUM_GROUPS][DEPTH];
 int waiting = 0;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -170,7 +167,7 @@ for (k=j;k<NMOVE;k++)
 }
 }
 
-int restrictMoves(SearchNode *sn,int depth){
+int restrictMoves(SearchNode *sn,int depth,int group){
 int ret = 0;
 #pragma omp critical
 {
@@ -185,14 +182,14 @@ int ret = 0;
 	}
 	
 	for(i=0;i<DEPTH;i++){
-		if(limit[i] == 11){
+		if(limit[group][i] == 11){
 			if(i+1 == DEPTH){
 				ret = -1;
 				waiting=1;
 			}
-			limit[i] = 0;
+			limit[group][i] = 0;
 		} else {
-			limit[i]++;
+			limit[group][i]++;
 			break;
 		}
 	}
@@ -201,7 +198,7 @@ int ret = 0;
 	int j = DEPTH;
 	for(i=0;i<DEPTH;i++){
 		j = j-1;
-		sn[j].movesRestricted = (1<<limit[i]);
+		sn[j].movesRestricted = (1<<limit[group][i]);
 		sn[j].movesAllowed &= sn[j].movesRestricted;
 		sn[j].move = mU1-1;
 		//printf(" %d",limit[i]);
@@ -221,8 +218,9 @@ void solveOptimal(CubieCube cu,int group)
 {
 int i;
 for(i = 0; i<DEPTH; i++){
-	limit[i]=0;
+	limit[group][i]=0;
 }
+
 
 int movesClaimed = 0;
 int threadMoves = 0;
@@ -344,7 +342,7 @@ snP->movesCloserTargetF= moveBitsConjugate[movesCloserToTarget[twistConjF]
 snP->movesAllowed = 0xfff;//all moves are allowed for the first node
 snP->mSym = sym;
 
-restrictMoves(sn,0);
+restrictMoves(sn,0,group);
 
 if (snP->distU==0 && snP->distR==0 && snP->distF==0 ) r_depth = manLength=2;
 else
@@ -393,14 +391,22 @@ snP->move = nextMove[snP->movesAllowed][++(snP->move)];
 while(snP->move ==-1){
 	if (r_depth==manLength)
 	{
-		if(restrictMoves(sn,manLength)==-1){
+		if(restrictMoves(sn,manLength,group)==-1){
 			fprintf(outFile,"depth %2u completed, %14"PRIu64" nodes",manLength,nodes);
 			fprintf(outFile,", %14"PRIu64" tests\n",tests);
 			fflush(outFile);
-			if(manLength>=optimalDist){ret=1;break;}
+			if(manLength>=optimalDist){
+				depthDone[ID] = 99;
+				ret=1;
+				break;
+			}
 			r_depth +=2;
 			manLength = r_depth;
-			if (manLength>optimalDist+2*subOptLev) {ret = 1;break;}
+			if (manLength>optimalDist+2*subOptLev) {
+				depthDone[ID] = 99;
+				ret = 1;
+				break;
+			}
 			
 			snP->move = mU1-1;
 			snP->movesAllowed = snP->movesRestricted;

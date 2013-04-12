@@ -5,7 +5,6 @@
 //This disables the SIGNAL handling.
 
 
-#define NUM_GROUPS 2
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,7 +162,7 @@ while (1)
 	char line[100];
 
 	
-	for(threadCounter=0;threadCounter<getNumThreads();threadCounter++){
+	for(threadCounter=0;threadCounter<NUM_THREADS;threadCounter++){
 		sprintf(inFileName,"OpenMPHybridVariableDepthThread%dGroup%dOut.txt",threadCounter,ID);
 		tempIn = fopen(inFileName,"r");
 		while(fgets(line,sizeof line,tempIn) != NULL){

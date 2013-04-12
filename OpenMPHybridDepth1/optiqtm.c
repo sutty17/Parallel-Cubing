@@ -4,7 +4,6 @@
 //Comment this line out if you compile with MinGW under Windows.
 //This disables the SIGNAL handling.
 
-#define NUM_GROUPS 2
 
 #include <stdio.h>
 #include <stdlib.h>

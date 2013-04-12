@@ -5,7 +5,8 @@
 
 
 #define Color		Axis
-
+#define NUM_GROUPS 1
+#define NUM_THREADS 2
 #define NSYM_Oh			48 
 #define NSYM_D4h		16
 #define NMOVE			12
